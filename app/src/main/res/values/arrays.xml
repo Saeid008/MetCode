@@ -1,0 +1,78 @@
+<resources>
+    <!--
+        Cloud type list for the per-layer "Type" dropdown, exactly matching
+        AWSPlus's own labels (WMO Tables 0513/0515/0509 combined: CL codes
+        1-9, CM codes 1-9, CH codes 1-9). The app determines CL/CM/CH
+        membership from which label was picked (see CloudTypes.kt).
+    -->
+    <string-array name="cloud_types">
+        <item>-</item>
+        <item>CU1</item>
+        <item>CU2</item>
+        <item>CB3</item>
+        <item>SC4</item>
+        <item>SC5</item>
+        <item>ST6</item>
+        <item>FS,FC7</item>
+        <item>CU,SC8</item>
+        <item>CB9</item>
+        <item>AS1</item>
+        <item>AS2</item>
+        <item>NS2</item>
+        <item>AC3</item>
+        <item>AC4</item>
+        <item>AC5</item>
+        <item>AC6</item>
+        <item>AC7</item>
+        <item>AC,AS7</item>
+        <item>AC8</item>
+        <item>AC9</item>
+        <item>CI1</item>
+        <item>CI2</item>
+        <item>CI3</item>
+        <item>CI4</item>
+        <item>CS5</item>
+        <item>CS6</item>
+        <item>CS7</item>
+        <item>CS8</item>
+        <item>CC9</item>
+        <item>/</item>
+    </string-array>
+
+    <!-- Cloud layer "Value" (amount) dropdown, TR (trace) through 8 oktas. -->
+    <string-array name="cloud_amounts">
+        <item>-</item>
+        <item>TR</item>
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>/</item>
+    </string-array>
+
+    <!-- Total cloud amount N: TR (trace), 0-9, / (not observed). -->
+    <string-array name="n_values"><item>0</item><item>1</item><item>2</item><item>3</item><item>4</item><item>5</item><item>6</item><item>7</item><item>8</item><item>9</item><item>/</item><item>TR</item></string-array>
+
+    <!-- Height code h of the lowest cloud base: 0-9, / (not observed). -->
+    <string-array name="h_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>/</item>
+    </string-array>
+    <string-array name="a_values"><item>0</item><item>1</item><item>2</item><item>3</item><item>4</item><item>5</item><item>6</item><item>7</item><item>8</item><item>/</item></string-array>
+    <string-array name="e_values"><item>0</item><item>1</item><item>2</item><item>3</item><item>4</item><item>5</item><item>6</item><item>7</item><item>8</item><item>9</item><item>/</item></string-array>
+    <string-array name="vis_units"><item>km</item><item>m</item></string-array>
+</resources>

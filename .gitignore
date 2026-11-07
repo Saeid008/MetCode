@@ -1,0 +1,47 @@
+﻿# Gradle
+.gradle/
+**/build/
+.gradle-cache/
+
+# Android Studio
+.idea/
+*.iml
+
+# Kotlin
+.kotlin/
+
+# Local machine configuration
+local.properties
+
+# Android native build
+.cxx/
+.externalNativeBuild/
+captures/
+
+# Signing files - NEVER COMMIT
+*.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
+keystore.properties
+signing.properties
+
+# Secrets and credentials
+secrets.properties
+.env
+.env.*
+!.env.example
+
+# Android build packages
+*.apk
+*.aab
+*.apks
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local backup files
+*.backup

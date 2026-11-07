@@ -1,0 +1,21 @@
+# Met Calculator style file (UTF-8). Change a value, save, rebuild the app, and look at the result.
+#
+# Font: default = the phone font. To use another font (for example Vazir), copy its .ttf or .otf file into
+# app/src/main/assets/fonts and write the file name here, for example:  font_fa = Vazir.ttf
+font_en = default
+font_fa = default
+#
+# Sizes are in sp (like points in Word). Larger number = larger text.
+# Group headers (for example "Group Nddff ...")
+size_title = 14
+# Box titles (the small text above each box)
+size_label = 13
+# Text typed in boxes and the items of dropdown lists
+size_input = 14
+# The Menu word in the top bar
+size_menu = 16
+# Opening screen: app name, and the "Made by Observer 40827" text
+size_splash_title = 30
+size_splash_text = 20
+# Language page buttons (first launch)
+size_language_button = 22

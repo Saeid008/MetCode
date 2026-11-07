@@ -1,0 +1,4 @@
+# MetCode update settings.
+# update_repo = GitHub owner/repository containing the application releases.
+# The latest release must include a signed APK.
+update_repo = Saeid008/MetCode

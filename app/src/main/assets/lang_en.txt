@@ -1,0 +1,311 @@
+# Met Calculator text file: English
+# Edit the text, save the file as UTF-8, then rebuild the app.
+# [ui] lines:        key = text            (write \n for a new line; do not change the key)
+# dropdown sections: code | description    (add or delete lines freely; the code is what goes into the SYNOP)
+
+[ui]
+app_name = MetCode
+menu = Menu
+menu_language = Change App Language
+menu_about = About
+close = Close
+about_text = This application was developed by Observer 40827 to facilitate and assist meteorological observers across the country in generating SYNOP and METAR codes under special conditions. In this application, an effort has been made to generate SYNOP and METAR codes in the same way as the official application of the Meteorological Organization (AWSPlus).
+
+To submit suggestions regarding this application, you can contact me via the following email:
+mo.sa.sarabandi@gmail.com
+hint_station = Type to search for a station
+l_elev = Station Elevation (m)
+l_lat = Lat N
+l_lon = Lon E
+l_wmo = WMO code
+l_icao = ICAO code
+g_yygg = Group YYGGIW
+l_day = Day (YY)
+l_hour = Hour (GG)
+l_iw = Wind Indicator (IW)
+g_irix = Group IRIXhVV
+l_ir = IR
+l_ix = IX
+l_h = Height of lowest cloud layer (h)
+l_vis = Horizontal visibility (VV)
+l_unit = Unit
+l_vv = Vertical visibility (m)
+g_nddff = Group Nddff (Cloud number, wind direction and speed) and 910ff (Gust wind)
+l_n = Total cloud amount (N)
+l_dd = Wind direction (Degree°)
+l_ff = Wind speed (m/s)
+l_gust = Gust wind (m/s)
+g_press = Group 3PPPP (Station pressure-QFE), 4PPPP (Sea Level Pressure-QFF) and 5aPPP (Pressure Change and Character)
+l_barpress = Bar Press station
+l_bartemp = Bar Temp station
+l_pcor = Corrected pressure
+l_qfe_hpa = QFE station per (hPa)
+l_qff = QFF (MSL Pressure by Actual Air Temperature) (hPa)
+l_850 = Height of the 850 hPa Pressure Level at the Station (m)
+l_qnh = QNH (MSL Pressure by Standard Atmosphere) (hPa)
+l_qnh_in = QNH (MSL Pressure by Standard Atmosphere) (inHg)
+l_add_qnh = Add QNH group in inches of mercury to METAR
+l_qfe_1h = QFE one hour ago
+l_qfe_2h = QFE two hours ago
+l_qfe_3h = QFE three hours ago
+l_a3 = a3
+l_ppp3 = ppp3 (hPa)
+g_temp = Group 1SnTTT (Temperature) 2SnTdTdTd (Dew Point) 1SnTwTwTw (Wet Bulb Temperature) 29UUU (Relative Humidity)
+l_t12 = T12
+l_t = Temperature (°C)
+l_dp = Dew Point (°C)
+l_wt = Wet Bulb Temperature (°C)
+l_rh = Relative Humidity (%)
+hint_temp_utc = Temp UTC
+fmt_temp_utc = Temp %02d UTC
+fmt_qfe_utc = %02d:00 UTC
+hint_utc = UTC
+g_rain = Group 6RRRTR (Precipitation mm)
+l_r1 = R_1h (mm or TR)
+l_r6 = R_6h (mm or TR)
+l_r24 = R_24h (mm or TR)
+g_ww = Group 7wwW1W2 (Present weather / Past weather)
+l_ww = The Present weather (ww)
+l_w1 = The Past weather (W1)
+l_w2 = The Past weather (W2)
+g_snow = Group 3ESnTgTg (E & Tg) 4Esss (E' & Snow Depth) 9SPSPSPSP (Height of Fresh Snow) 5EEEiE (Evaporation)
+l_e = E (ground, no snow)
+l_tg = Tg (min ground T, whole °C)
+l_eprime = E' (ground with snow)
+l_snow = Snow Depth (cm). Tap the arrow to pick 997 / 998 / 999
+l_fresh = Height of Fresh Snow (cm). Tap the arrow to pick 1097 / 1098 / 1099
+l_evap = Evaporation (mm)
+g_tmaxmin = Group 1SnTxTxTx 2SnTnTnTn (Tmax / Tmin over 12 h)
+l_tmin = Tmin_12
+l_tmax = Tmax_12
+g_soilt = Group 66666 (Soil temperature, °C)
+g_soilm = Group 77777 (Soil moisture, %)
+l_5cm = 5 cm
+l_10cm = 10 cm
+l_20cm = 20 cm
+l_30cm = 30 cm
+l_50cm = 50 cm
+l_70cm = 70 cm
+l_100cm = 100 cm
+g_sun = Group 55sss (Sunshine, hours)
+l_sun = Sun D (hours, e.g. 4.2)
+g_maxwind = Group 3ddff 4dgdgfgfg (Max wind and max gust over 24 h)
+l_mw_dd = Max Wind dd (deg)
+l_mw_ff = Max Wind ff (m/s)
+l_mg_dd = Max Gust dd (deg)
+l_mg_ff = Max Gust ff (m/s)
+g_cloud = Group 8NhCLCMCH (Cloud)
+l_layer1_value = Layer 1 value
+l_layer1_type = Layer 1 type
+l_layer1_height = Layer 1 height (m)
+l_layer2_value = Layer 2 value
+l_layer2_type = Layer 2 type
+l_layer2_height = Layer 2 height (m)
+l_layer3_value = Layer 3 value
+l_layer3_type = Layer 3 type
+l_layer3_height = Layer 3 height (m)
+l_layer4_value = Layer 4 value
+l_layer4_type = Layer 4 type
+l_layer4_height = Layer 4 height (m)
+out_hint = SYNOP and METAR (touch a code to copy it)
+msg_select_station = Select a station to generate the SYNOP and METAR codes.
+toast_no_code = Select a station first, there is no code to copy yet
+toast_copied = %1$s code copied
+type_sm = SM (main)
+type_si = SI (intermediate)
+type_sn = SN (hourly)
+splash_text = Made by Observer 40827
+splash_version = Version %s
+
+[a3]
+0 | Increasing, then decreasing (now higher or equal to 3 h ago)
+1 | Increasing, then steady; or increasing slowly
+2 | Increasing steadily or unsteadily
+3 | Decreasing or steady, then increasing; or increasing faster
+4 | Steady (same as 3 hours ago)
+5 | Decreasing, then increasing (now lower)
+6 | Decreasing, then steady; or decreasing slowly
+7 | Decreasing steadily or unsteadily
+8 | Steady or increasing, then decreasing; or decreasing faster
+/ | Not available
+
+[e]
+0 | Ground dry (no cracks, no dust or sand)
+1 | Ground moist
+2 | Ground wet (standing water in small or large pools)
+3 | Flooded
+4 | Ground frozen
+5 | Thin layer of ice on the ground
+6 | Loose dry dust or sand, not covering the ground completely
+7 | Thin layer of loose dust or sand covers the ground completely
+8 | Moderate or thick layer of loose dust or sand on the ground
+9 | Very dry ground with cracks
+/ | Not reported
+
+[eprime]
+0 | Ground mostly covered with ice
+1 | Compact or wet snow covering less than half of the ground
+2 | Compact or wet snow covering at least half, but not all
+3 | Even layer of compact or wet snow covering the whole ground
+4 | Uneven layer of compact or wet snow covering the whole ground
+5 | Loose dry snow covering less than half of the ground
+6 | Loose dry snow covering at least half, but not all
+7 | Even layer of loose dry snow covering the whole ground
+8 | Uneven layer of loose dry snow covering the whole ground
+9 | Snow completely covering the ground, deep drifts
+/ | Not reported
+
+[h]
+0 | 1 to 50 m
+1 | 50 to 100 m
+2 | 100 to 200 m
+3 | 200 to 300 m
+4 | 300 to 600 m
+5 | 600 to 1000 m
+6 | 1000 to 1500 m
+7 | 1500 to 2000 m
+8 | 2000 to 2500 m
+9 | 2500 m or more, or no low cloud
+/ | Sky not visible (fog, dust, etc.) or cloud base below station
+
+[past]
+0 | Half or less of the sky cloudy
+1 | Sometimes less, sometimes more than half cloudy
+2 | More than half of the sky cloudy
+3 | Dust or sand storm, blowing snow
+4 | Fog or thick haze (visibility under 1000 m)
+5 | Drizzle
+6 | Rain
+7 | Snow, or rain and snow mixed
+8 | Shower(s)
+9 | Thunderstorm with or without precipitation
+
+[ww]
+00 | Observation not made, or cloud information not available
+01 | Clouds generally decreasing
+02 | Sky state unchanged
+03 | Clouds forming or increasing
+04 | Smoke
+05 | Haze
+06 | Widespread dust in suspension (not raised by wind)
+07 | Dust or sand raised by wind
+08 | Dust or sand whirls (dust devil)
+09 | Dust or sand storm around the station or in the past hour
+10 | Mist (visibility 1 km or more)
+11 | Patches of shallow fog (scattered)
+12 | Shallow fog, more or less continuous
+13 | Lightning seen, no thunder heard
+14 | Precipitation in sight, not reaching the ground
+15 | Precipitation reaching the ground, more than 5 km away
+16 | Precipitation reaching the ground, less than 5 km, not at the station
+17 | Thunderstorm without precipitation
+18 | Squall
+19 | Funnel cloud (tornado or waterspout)
+20 | Past hour: drizzle or snow grains
+21 | Past hour: rain
+22 | Past hour: snow
+23 | Past hour: rain and snow, or ice pellets
+24 | Past hour: freezing rain or freezing drizzle
+25 | Past hour: rain shower
+26 | Past hour: snow shower, or rain and snow shower
+27 | Past hour: hail
+28 | Past hour: fog
+29 | Past hour: thunderstorm
+30 | Dust or sand storm, light or moderate, decreasing
+31 | Dust or sand storm, light or moderate, unchanged
+32 | Dust or sand storm, light or moderate, increasing
+33 | Severe dust or sand storm, decreasing
+34 | Severe dust or sand storm, unchanged
+35 | Severe dust or sand storm, increasing
+36 | Blowing snow, light or moderate, below eye level
+37 | Blowing snow, heavy, below eye level
+38 | Blowing snow, light or moderate, above eye level
+39 | Blowing snow, heavy, above eye level
+40 | Fog in the distance, not at the station
+41 | Patches of fog (deep)
+42 | Fog, sky visible, thinner in the past hour
+43 | Fog, sky not visible, thinner in the past hour
+44 | Fog, sky visible, unchanged
+45 | Fog, sky not visible, unchanged
+46 | Fog, sky visible, thicker in the past hour
+47 | Fog, sky not visible, thicker in the past hour
+48 | Freezing fog depositing rime, sky visible
+49 | Freezing fog depositing rime, sky not visible
+50 | Drizzle, intermittent, light
+51 | Drizzle, continuous, light
+52 | Drizzle, intermittent, moderate
+53 | Drizzle, continuous, moderate
+54 | Drizzle, intermittent, heavy
+55 | Drizzle, continuous, heavy
+56 | Freezing drizzle, light
+57 | Freezing drizzle, moderate or heavy
+58 | Drizzle and rain, light
+59 | Drizzle and rain, moderate or heavy
+60 | Rain, intermittent, light
+61 | Rain, continuous, light
+62 | Rain, intermittent, moderate
+63 | Rain, continuous, moderate
+64 | Rain, intermittent, heavy
+65 | Rain, continuous, heavy
+66 | Freezing rain, light
+67 | Freezing rain, moderate or heavy
+68 | Rain or drizzle with snow, light
+69 | Rain or drizzle with snow, moderate or heavy
+70 | Snow, intermittent, light
+71 | Snow, continuous, light
+72 | Snow, intermittent, moderate
+73 | Snow, continuous, moderate
+74 | Snow, intermittent, heavy
+75 | Snow, continuous, heavy
+76 | Ice crystals (diamond dust), with or without fog
+77 | Snow grains, with or without fog
+78 | Isolated star-shaped snow crystals
+79 | Ice pellets
+80 | Rain shower, light
+81 | Rain shower, moderate or heavy
+82 | Rain shower, violent
+83 | Rain and snow shower, light
+84 | Rain and snow shower, moderate or heavy
+85 | Snow shower, light
+86 | Snow shower, moderate or heavy
+87 | Small or soft hail shower, light
+88 | Small or soft hail shower, moderate or heavy
+89 | Hail shower, light
+90 | Hail shower, moderate or heavy
+91 | Thunderstorm in the past hour, now light rain
+92 | Thunderstorm in the past hour, now moderate or heavy rain
+93 | Thunderstorm in the past hour, now light snow, rain and snow, or hail
+94 | Thunderstorm in the past hour, now moderate or heavy snow, rain and snow, or hail
+95 | Thunderstorm, light or moderate, with rain or snow (no hail)
+96 | Thunderstorm, light or moderate, with hail
+97 | Thunderstorm, heavy, with rain or snow (no hail)
+98 | Thunderstorm with dust or sand storm
+99 | Thunderstorm, heavy, with hail
+
+[iw]
+0 | m/s (estimated)
+1 | m/s (from anemometer)
+
+[ir]
+1 | Whether precipitation exists or not, group 6RRRTR is included in Section 1
+2 | Group 6RRRTR is included in Section 3 and precipitation exists
+3 | Group 6RRRTR is not included in Section 1 or 3 because there is no precipitation, and is omitted (currently not used in Iran)
+4 | Group 6RRRTR is not included in Section 1 or 3 because there is no regional requirement, and is omitted
+
+[ix]
+1 | Station is non-automatic and group 7wwW1W2 is included in the report (a present or past weather phenomenon existed)
+2 | Station is non-automatic and group 7wwW1W2 is omitted from the report
+3 | Station is non-automatic and group 7wwW1W2 is omitted (observation not made or information not available)
+4 | Station is automatic and group 7wawa// is included in the report (a phenomenon existed at the present or past time)
+5 | Station is automatic and group 7wawa// is omitted (no significant phenomenon exists)
+6 | Station is automatic and group 7wawa// is omitted (observation not made or information not available)
+
+[total]
+997 | Less than 0.5 cm
+998 | Snow on the ground, ground not entirely covered
+999 | Cannot be measured
+
+[fresh]
+1097 | Less than 0.1 cm
+1098 | More than 400 cm
+1099 | Cannot be measured
