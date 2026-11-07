@@ -1,4 +1,4 @@
-# Met Calculator text file: English
+﻿# Met Calculator text file: English
 # Edit the text, save the file as UTF-8, then rebuild the app.
 # [ui] lines:        key = text            (write \n for a new line; do not change the key)
 # dropdown sections: code | description    (add or delete lines freely; the code is what goes into the SYNOP)
@@ -9,10 +9,15 @@ menu = Menu
 menu_language = Change App Language
 menu_about = About
 close = Close
-about_text = This application was developed by Observer 40827 to facilitate and assist meteorological observers across the country in generating SYNOP and METAR codes under special conditions. In this application, an effort has been made to generate SYNOP and METAR codes in the same way as the official application of the Meteorological Organization (AWSPlus).
+about_text = The MetCode application was developed by Observer 40827 to assist meteorological observers across the country in preparing SYNOP and METAR reports, particularly under certain critical conditions.
 
-To submit suggestions regarding this application, you can contact me via the following email:
-mo.sa.sarabandi@gmail.com
+During the development of this software, an effort has been made to align the coding procedures, as far as possible, with the procedures used in the PDF of Codes and Observation Methods published by the Iran Meteorological Organization.
+
+To submit suggestions, bug reports, or feature requests, you can use the following links:
+
+Project Repository: https://github.com/Saeid008/MetCode
+Bug Reports & Feature Requests: https://github.com/Saeid008/MetCode/issues/new
+Email: mo.sa.sarabandi@gmail.com
 hint_station = Type to search for a station
 l_elev = Station Elevation (m)
 l_lat = Lat N
@@ -309,3 +314,4 @@ splash_version = Version %s
 1097 | Less than 0.1 cm
 1098 | More than 400 cm
 1099 | Cannot be measured
+

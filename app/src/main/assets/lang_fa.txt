@@ -1,4 +1,4 @@
-# Met Calculator text file: Persian (فارسی)
+﻿# Met Calculator text file: Persian (فارسی)
 # Edit the text, save the file as UTF-8, then rebuild the app.
 # [ui] lines:        key = text            (write \n for a new line; do not change the key)
 # dropdown sections: code | description    (add or delete lines freely; the code is what goes into the SYNOP)
@@ -9,10 +9,15 @@ menu = منو
 menu_language = تغییر زبان برنامه
 menu_about = درباره
 close = بستن
-about_text = این برنامه توسط دیده بان 40827 برای تسهیل و کمک به دیده‌بانان هواشناسی سراسر کشور در تولید کدهای SYNOP و METAR در شرایط خاص تهیه شده است. در این برنامه تلاش شده است کدهای SYNOP و METAR به همان شیوهٔ برنامهٔ رسمی سازمان هواشناسی (AWSPlus) تولید شوند.
+about_text = هواکُد (MetCode) توسط دیدهبان ۴۰۸۲۷ با هدف کمک به دیده بانان هواشناسی سراسر کشور در تهیه و تولید گزارشهای SYNOP و METAR در شرایط خاص یا بحران توسعه داده شده است.
 
-برای ارسال پیشنهادات دربارهٔ این برنامه می‌توانید از طریق ایمیل زیر با من تماس بگیرید:
-mo.sa.sarabandi@gmail.com
+در توسعه این برنامه تلاش شده است روشهای کد گذاری تا حد امکان با کدها و روشهای دیده بانی مندرج در پی دی اف کدها و روشهای دیده بانی منتشر شده توسط سازمان هواشناسی کشور هماهنگ باشد.
+
+برای ارسال پیشنهاد گزارش خطا یا درخواست قابلیتهای جدید میتوانید از راههای زیر استفاده کنید:
+
+مخزن پروه: https://github.com/Saeid008/MetCode
+گزارش خطا و پیشنهادها: https://github.com/Saeid008/MetCode/issues/new
+ایمیل: mo.sa.sarabandi@gmail.com
 hint_station = برای جستجوی ایستگاه تایپ کنید
 l_elev = ارتفاع ایستگاه (متر)
 l_lat = عرض شمالی (Lat N)
@@ -309,3 +314,4 @@ splash_version = نسخه %s
 1097 | کمتر از ۰٫۱ سانتی‌متر
 1098 | بیش از ۴۰۰ سانتی‌متر
 1099 | اندازه‌گیری ممکن نیست
+
