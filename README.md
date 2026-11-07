@@ -102,6 +102,6 @@ Report bugs and suggest improvements through [GitHub Issues](https://github.com/
 
 ## License
 
-Copyright © 2026 Saeid. All rights reserved.
+Copyright © 2026 All rights reserved.
 
 This is a public repository for source-code inspection. It is **not** released under an open-source license. No permission is granted to use, modify, or redistribute the source code or bundled assets without prior written permission from the copyright holder.
