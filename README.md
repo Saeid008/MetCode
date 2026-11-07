@@ -1,161 +1,107 @@
 # MetCode
 
-**SYNOP & METAR Encoder**
+**SYNOP & METAR Encoder · هواکُد**
 
-MetCode is an Android application designed to assist meteorological observers with station data calculations and the preparation of standardized SYNOP and METAR reports.
+[![Latest release](https://img.shields.io/github/v/release/Saeid008/MetCode?display_name=tag)](https://github.com/Saeid008/MetCode/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Saeid008/MetCode/total)](https://github.com/Saeid008/MetCode/releases)
 
-The application combines meteorological calculations, observation input, station information, and report encoding in a single interface.
+MetCode is an Android application for meteorological observers. It brings SYNOP (FM-12) and METAR (FM-15) report encoding, station information, and supporting meteorological calculations into one bilingual interface.
+
+## Download
+
+**[Download the latest APK](https://github.com/Saeid008/MetCode/releases/latest/download/app-release.apk)**
+
+Browse [all releases](https://github.com/Saeid008/MetCode/releases) for version history and release notes.
 
 ## Features
 
-### Meteorological Calculations
-- QFE, QFF, and QNH pressure calculations.
-- 850 hPa pressure-level height calculation.
-- Dew point and relative humidity calculations.
-- Pressure tendency calculations.
+- **SYNOP encoding (FM-12):** assemble supported report groups from observer-entered values and code selections, including temperature, pressure, wind, cloud, visibility, weather, precipitation, snow, soil, sunshine, and wind extremes.
+- **METAR encoding (FM-15):** prepare report elements for wind, visibility, cloud, weather, temperature/dew point, and QNH. Wind speed entered in metres per second is converted to knots for METAR output.
+- **Meteorological calculations:** barometer corrections; QFE, QFF, and QNH; 850 hPa pressure-level height; dew point; relative humidity; wet-bulb temperature; and pressure tendency.
+- **Station database:** 419 station records with names, WMO and ICAO identifiers, elevation, and coordinates.
+- **Observation history:** retain station-specific temperature and QFE observations by UTC hour to assist with later report fields.
+- **Bilingual interface:** English and Persian, with right-to-left layout for Persian.
+- **Configurable appearance:** text sizes and optional custom fonts are read from local asset files.
 
-### SYNOP and METAR
-- SYNOP report generation.
-- METAR report generation.
-- Meteorological observation input and code selection.
-- Station identification and station-code management.
+> MetCode is an observer's aid. Always review generated reports against the applicable WMO and national procedures before operational transmission.
 
-### Application Features
-- English and Persian interface.
-- Observation history.
-- Station database.
-- In-app update checking through GitHub Releases.
+## Build from source
 
-The generated reports should always be reviewed by the observer before operational transmission.
+### Requirements
 
-## Project Information
+- Android Studio
+- JDK 17 or newer
+- Android SDK Platform 34
+- Internet access for Gradle and Android dependencies
 
-| Item | Value |
-|---|---|
-| Application name | MetCode |
-| Persian name | هواکُد |
-| Package name | `com.metcode` |
-| Platform | Android |
-| Minimum Android version | Android 5.0 (API 21) |
-| Programming language | Kotlin |
-| Build system | Gradle |
-| Current development version | 0.1.0 |
-
-## Project Structure
-
-```text
-MetCode/
-├── app/
-│   ├── src/
-│   │   └── main/
-│   │       ├── assets/
-│   │       ├── java/
-│   │       │   └── com/
-│   │       │       └── metcode/
-│   │       ├── res/
-│   │       └── AndroidManifest.xml
-│   └── build.gradle
-├── gradle/
-├── .gitignore
-├── build.gradle
-├── gradle.properties
-├── gradlew
-├── gradlew.bat
-├── settings.gradle
-└── README.md
-```
-
-## Requirements
-
-To build MetCode, you need:
-
-- Android Studio.
-- Android SDK.
-- A compatible JDK.
-- An internet connection for downloading Gradle dependencies.
-
-## Building the Application
+### Build a debug APK
 
 Clone the repository:
 
 ```bash
 git clone https://github.com/Saeid008/MetCode.git
-```
-
-Enter the project directory:
-
-```bash
 cd MetCode
 ```
 
-Build the debug APK on Windows:
+On Windows:
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-The generated APK will be available at:
+On macOS or Linux:
+
+```bash
+./gradlew assembleDebug
+```
+
+The debug APK is generated at:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Releases and Updates
+Release builds require the maintainer's local signing configuration. The signing keystore and its passwords are intentionally not stored in this repository. **Never commit signing keys, passwords, or local signing properties.**
 
-Official application releases are published through GitHub Releases.
+## In-app updates
 
-Each release should include a signed APK and release notes describing the changes.
+The app checks the latest public GitHub Release for this repository and looks for an APK asset. When a newer version is available, it downloads the APK and opens the Android package installer for the user to approve.
 
-MetCode includes an in-app update mechanism that checks the latest GitHub Release, downloads its APK asset, and opens the Android package installer.
-
-The update repository is configured in:
+The repository is configured in:
 
 ```text
 app/src/main/assets/app_config.txt
 ```
 
-Set the repository value to:
+Current setting:
 
-```text
-update_repo=Saeid008/MetCode
+```properties
+update_repo = Saeid008/MetCode
 ```
 
-No GitHub access token is required for checking releases of a public repository.
+For an update to install successfully:
 
-## Versioning
+1. Publish a non-draft, non-prerelease GitHub Release with a tag such as `v0.1.1`.
+2. Attach the signed APK as a release asset (the current updater selects an asset whose name ends in `.apk`).
+3. Increase Android's `versionCode` for every update.
+4. Keep the application ID (`com.metcode`) and the same signing key used for the installed app.
 
-MetCode uses semantic versioning:
+The public releases API does not require a GitHub access token.
 
-```text
-MAJOR.MINOR.PATCH
-```
+## Project layout
 
-Examples:
+- `app/src/main/java/com/metcode/` — Kotlin application code
+- `app/src/main/assets/` — language tables, station/update settings, style configuration, and splash-screen images
+- `app/src/main/res/` — Android layouts and resources
+- `gradle/` — Gradle Wrapper files
+- `README.md` — project documentation
 
-- `0.1.0` — Initial development release.
-- `0.1.1` — Bug fixes.
-- `0.2.0` — New features.
-- `1.0.0` — First stable release.
+## Feedback
 
-The Android `versionCode` must increase with every published update.
+Report bugs and suggest improvements through [GitHub Issues](https://github.com/Saeid008/MetCode/issues).
 
-## Issues and Contributions
+## License
 
-Bug reports, feature suggestions, and technical discussions are welcome through GitHub Issues.
+Copyright © 2026 Saeid. All rights reserved.
 
-Pull requests may be submitted for review. All contributions are subject to review and acceptance by the project maintainer.
-
-Before third-party code contributions are merged, a separate contribution agreement may be required.
-
-## Copyright and Repository Use
-
-Copyright (c) 2026 Saeid. All rights reserved.
-
-This repository is publicly available for source-code inspection and discussion. It is not distributed under an open-source software license.
-
-No license is granted to reuse, copy, modify, redistribute, or incorporate this source code into other projects without prior written permission from the copyright holder.
-
-GitHub's platform permissions for viewing and forking public repositories remain applicable.
-
-**Project:** MetCode
-**Maintainer:** Saeid (@Saeid008)
+This is a public repository for source-code inspection. It is **not** released under an open-source license. No permission is granted to use, modify, or redistribute the source code or bundled assets without prior written permission from the copyright holder.
