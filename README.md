@@ -52,7 +52,7 @@ On Windows:
 On macOS or Linux:
 
 ```bash
-./gradlew assembleDebug
+bash gradlew assembleDebug
 ```
 
 The debug APK is generated at:
