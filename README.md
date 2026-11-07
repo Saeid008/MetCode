@@ -79,7 +79,7 @@ To build MetCode, you need:
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/MetCode.git
+git clone https://github.com/Saeid008/MetCode.git
 ```
 
 Enter the project directory:
@@ -117,7 +117,7 @@ app/src/main/assets/app_config.txt
 Set the repository value to:
 
 ```text
-update_repo=YOUR_GITHUB_USERNAME/MetCode
+update_repo=Saeid008/MetCode
 ```
 
 No GitHub access token is required for checking releases of a public repository.
