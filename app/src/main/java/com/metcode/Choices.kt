@@ -33,8 +33,8 @@ class ChoiceAdapter(context: Context, items: List<Choice>) :
 }
 
 /** Plain text list (N, unit, cloud type...) with the app text size and font. */
-class StyledArrayAdapter(context: Context, items: List<String>) :
-    ArrayAdapter<String>(context, R.layout.spinner_item, items) {
+class StyledArrayAdapter(context: Context, items: List<String>, layout: Int = R.layout.spinner_item) :
+    ArrayAdapter<String>(context, layout, items) {
     init { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
         Style.styleInput(context, super.getView(position, convertView, parent) as TextView)
@@ -76,6 +76,9 @@ object Choices {
     var ix: List<Choice> = emptyList()
     var totalSnowSpecial: List<Choice> = emptyList()
     var freshSnowSpecial: List<Choice> = emptyList()
+    /** Snow Depth and Fresh Snow dropdowns: "—" (nothing coded), then the special codes of the language files ([total] and [fresh]). */
+    var totalSnow: List<Choice> = emptyList()
+    var freshSnow: List<Choice> = emptyList()
 
     fun load(c: Context) {
         fun t(name: String) = Lang.table(c, name).map { Choice(it.first, it.second) }
@@ -83,5 +86,8 @@ object Choices {
         ww = t("ww"); iw = t("iw"); ir = t("ir"); ix = t("ix")
         totalSnowSpecial = t("total")
         freshSnowSpecial = t("fresh")
+        val none = Choice("", "", "\u2014")
+        totalSnow = listOf(none) + totalSnowSpecial
+        freshSnow = listOf(none) + freshSnowSpecial
     }
 }

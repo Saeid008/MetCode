@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 
 /** Asks for the app language once (first launch only): the two choices sit at the bottom, over the splash photo. */
 class LanguageActivity : BaseActivity() {
@@ -39,6 +40,18 @@ class LanguageActivity : BaseActivity() {
         }
         col.addView(choice("English", "en"))
         col.addView(choice("\u0641\u0627\u0631\u0633\u06CC", "fa"))
+
+        // app version under the buttons, read from versionName in build.gradle (both languages, since none is chosen yet)
+        val version = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
+        fun versionLine(format: String) = TextView(this).apply {
+            text = String.format(java.util.Locale.US, format, version)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, Style.size(this@LanguageActivity, "size_language_version", 15f))
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(6), 0, 0)
+        }
+        col.addView(versionLine("Version %s").apply { setPadding(0, dp(16), 0, 0) })
+        col.addView(versionLine("\u0646\u0633\u062E\u0647 %s"))
         root.addView(col, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM)
             .apply { setMargins(dp(40), 0, dp(40), dp(64)) })
         setContentView(root)

@@ -203,8 +203,8 @@ class MainActivity : BaseActivity() {
         binding.btnMenu.setOnClickListener { v ->
             val popup = PopupMenu(this, v)
             popup.menu.add(0, 1, 0, T("menu_language"))
-            popup.menu.add(0, 2, 1, T("menu_about"))
-            popup.menu.add(0, 3, 2, Td("menu_update", "Update App", "به‌روزرسانی برنامه"))
+            popup.menu.add(0, 3, 1, Td("menu_update", "Update App", "به‌روزرسانی برنامه"))
+            popup.menu.add(0, 2, 2, T("menu_about"))
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) { 1 -> showLanguageDialog(); 2 -> showAbout(); 3 -> Updater.check(this) { k, en, fa -> Td(k, en, fa) } }
                 true
@@ -263,32 +263,11 @@ class MainActivity : BaseActivity() {
             if (keep in items.indices) sp.setSelection(keep)
         }
         plain(binding.spN, resources.getStringArray(R.array.n_values).toList())
-        plain(binding.spVisUnit, resources.getStringArray(R.array.vis_units).toList())
+        binding.spVisUnit.adapter = StyledArrayAdapter(this, resources.getStringArray(R.array.vis_units).toList(), R.layout.spinner_item_compact)
+        binding.spVisUnit.setSelection(0)
         for (sp in layerTypeSpinners) plain(sp, resources.getStringArray(R.array.cloud_types).toList())
-        bindSpecialBox(binding.etTotalSnow, Choices.totalSnowSpecial, w)
-        bindSpecialBox(binding.etFresh, Choices.freshSnowSpecial, w)
-    }
-
-    /** One box with an arrow: type the depth in cm, or tap the arrow to pick a special code from the list (lang_xx.txt, [total] / [fresh]). */
-    private fun bindSpecialBox(field: AutoCompleteTextView, items: List<Choice>, width: Int) {
-        field.setAdapter(SpecialAdapter(this, items))
-        field.threshold = 100000          // typing never pops the list up; the arrow does
-        field.dropDownWidth = width
-        field.setOnTouchListener { v, ev ->
-            if (ev.action == MotionEvent.ACTION_UP) {
-                val arrow = (v as TextView).compoundDrawablesRelative[2]
-                val reach = (arrow?.bounds?.width() ?: 0) + (16 * resources.displayMetrics.density).toInt()
-                val rtl = v.layoutDirection == View.LAYOUT_DIRECTION_RTL
-                val hit = if (rtl) ev.x <= v.paddingLeft + reach else ev.x >= v.width - v.paddingRight - reach
-                if (hit) {
-                    (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(v.windowToken, 0)
-                    field.showDropDown()
-                    v.performClick()
-                    return@setOnTouchListener true
-                }
-            }
-            false
-        }
+        fill(binding.spTotalSnow, Choices.totalSnow)
+        fill(binding.spFresh, Choices.freshSnow)
     }
 
     // ----------------------------------------------------- live code refresh plumbing
@@ -315,7 +294,7 @@ class MainActivity : BaseActivity() {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) = scheduleRefresh()
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
-        for (s in listOf(binding.spH, binding.spE, binding.spEPrime, binding.spA3, binding.spWW, binding.spW1, binding.spW2, binding.spIW, binding.spIR)) s.onItemSelectedListener = l
+        for (s in listOf(binding.spH, binding.spE, binding.spEPrime, binding.spA3, binding.spWW, binding.spW1, binding.spW2, binding.spIW, binding.spIR, binding.spTotalSnow, binding.spFresh)) s.onItemSelectedListener = l
         binding.spIX.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) { applyIxLock(); scheduleRefresh() }
             override fun onNothingSelected(p: AdapterView<*>?) {}
@@ -521,13 +500,17 @@ class MainActivity : BaseActivity() {
         show(binding.secSnowGroup, sm)
         show(binding.secETg, h == 6)
         show(binding.secEPrime, sm)
-        show(binding.secFreshEvap, h == 6)
+        show(binding.secFreshEvap, sm)
         show(binding.secTminTmax, h == 3 || h == 15)
         show(binding.secSoilT, h == 3 || h == 9 || h == 15)
         show(binding.secSoilM, h == 9)
         show(binding.secSun, h == 18)
         show(binding.secMaxWind, h == 21)
         fun box(f: View) = f.parent as View
+        show(box(binding.etEvap), h == 6)                // evaporation: 06 UTC only; E and Tg are also 06 UTC only
+        binding.tvSnowTitle.text = keepTogether(
+            if (h == 6 || h < 0) T("g_snow")
+            else Td("g_snow_sm", "Group 4Esss (E' & Snow Depth) 9SPSPSPSP (Height of Fresh Snow)", "\u06AF\u0631\u0648\u0647 4Esss (E' \u0648 \u0627\u0631\u062A\u0641\u0627\u0639 \u0628\u0631\u0641) 9SPSPSPSP (\u0627\u0631\u062A\u0641\u0627\u0639 \u0628\u0631\u0641 \u062A\u0627\u0632\u0647)"))
         show(box(binding.etR1h), h >= 0 && h % 3 != 0)   // SN hours only
         show(box(binding.etR6h), sm)                     // SM hours only
         show(box(binding.etR24h), h >= 0 && h % 3 == 0)  // 00, 03, ..., 21
@@ -676,6 +659,8 @@ class MainActivity : BaseActivity() {
     private fun refreshCodes() {
         if (selectedStationName.isEmpty()) {
             currentSynop = ""; currentMetar = ""
+            binding.tvSynopOut.textDirection = View.TEXT_DIRECTION_FIRST_STRONG
+            binding.tvSynopOut.layoutDirection = View.LAYOUT_DIRECTION_INHERIT
             binding.tvSynopOut.text = T("msg_select_station")
             binding.tvMetarOut.text = ""
             return
@@ -718,6 +703,11 @@ class MainActivity : BaseActivity() {
 
         currentSynop = buildSynop(day, hour, hr, ir, synopCode, dry, wet, rh, dewPoint, qfe, qff, dd, ff, variable, visM, n, h, ix, validLayers, cloud)
         currentMetar = buildMetar(day, hour, metarCode, dry, dewPoint, qnh, qnhInch, dd, ffExact, gustExact, variable, visM, n, ix, validLayers)
+        // the codes always read left to right, also in Persian
+        for (tv in listOf(binding.tvSynopOut, binding.tvMetarOut)) {
+            tv.layoutDirection = View.LAYOUT_DIRECTION_LTR
+            tv.textDirection = View.TEXT_DIRECTION_LTR
+        }
         binding.tvSynopOut.text = currentSynop
         binding.tvMetarOut.text = currentMetar
     }
@@ -762,7 +752,7 @@ class MainActivity : BaseActivity() {
         var snowGroupAdded = false
         if (hr == 0 || hr == 6 || hr == 12 || hr == 18) {
             val ep = spinnerText(binding.spEPrime)
-            val sss = binding.etTotalSnow.int()
+            val sss = spinnerText(binding.spTotalSnow).toIntOrNull()
             if (sss != null || ep != "/") { s3.add(SynopEncoder.groupSnow(ep, sss)); snowGroupAdded = true }
         }
         if (hr == 6) binding.etEvap.num()?.let { s3.add(SynopEncoder.groupEvaporation(it)) }
@@ -776,9 +766,9 @@ class MainActivity : BaseActivity() {
         }
         binding.etGust.int()?.let { s3.add("910%02d".format(it.coerceIn(0, 99))) }
         // fresh snow: only together with the snow group; written with a zero value when none is entered
-        if (hr == 6 && snowGroupAdded) {
+        if ((hr == 0 || hr == 6 || hr == 12 || hr == 18) && snowGroupAdded) {
             s3.add(SynopEncoder.FRESH_SNOW_TIME_GROUP)
-            s3.add(SynopEncoder.groupFreshSnow(binding.etFresh.int() ?: 0))
+            s3.add(SynopEncoder.groupFreshSnow(spinnerText(binding.spFresh).toIntOrNull() ?: 0))
         }
         if (s3.isNotEmpty()) { g.add("333"); g.addAll(s3) }
 
