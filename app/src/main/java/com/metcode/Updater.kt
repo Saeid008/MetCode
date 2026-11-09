@@ -16,17 +16,18 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.DigestInputStream
 import java.security.MessageDigest
+import java.util.Locale
 
 /**
  * "Update App": finds the newest GitHub Release (assets/app_config.txt: update_repo), shows its notes, and after the
  * user confirms downloads the .apk, checks it, and opens the installer.
  *
  * Checks before installing:
- *  - if the release has a file ending in .sha256 (for example app-release.apk.sha256), the download must match it;
+ *  - if the release has a file ending in .sha256 (for example MetCode.apk.sha256), the download must match it;
  *  - the file must be this app (same package name) and have a higher versionCode than the installed one.
  *
  * When the GitHub API refuses (rate limit), the newest tag is read from the releases/latest web link and the file
- * is expected to be named app-release.apk.
+ * is expected to be named MetCode.apk (falling back to app-release.apk for older releases).
  */
 object Updater {
 
@@ -69,15 +70,40 @@ object Updater {
     private fun fromApi(repo: String): Release {
         val json = JSONObject(httpGet("https://api.github.com/repos/$repo/releases/latest"))
         val assets = json.getJSONArray("assets")
-        var apk: String? = null
-        var sha: String? = null
+        var preferredApk: String? = null
+        var fallbackApk: String? = null
+        var preferredApkName: String? = null
+        var fallbackApkName: String? = null
+        val shaMap = HashMap<String, String>()
+
         for (i in 0 until assets.length()) {
             val o = assets.getJSONObject(i)
             val name = o.getString("name")
-            if (apk == null && name.endsWith(".apk", true)) apk = o.getString("browser_download_url")
-            if (sha == null && name.endsWith(".sha256", true)) sha = o.getString("browser_download_url")
+            val url = o.getString("browser_download_url")
+
+            if (name.endsWith(".apk", true)) {
+                if (name.equals("MetCode.apk", true)) {
+                    preferredApk = url
+                    preferredApkName = name
+                } else if (fallbackApk == null || name.equals("app-release.apk", true)) {
+                    fallbackApk = url
+                    fallbackApkName = name
+                }
+            } else if (name.endsWith(".sha256", true)) {
+                shaMap[name.lowercase(Locale.US)] = url
+            }
         }
-        return Release(json.getString("tag_name"), apk, sha, json.optString("body", ""))
+
+        val selectedApk = preferredApk ?: fallbackApk
+        val selectedApkName = preferredApkName ?: fallbackApkName
+
+        var sha: String? = null
+        if (selectedApkName != null) {
+            val key = selectedApkName.lowercase(Locale.US)
+            sha = shaMap["$key.sha256"] ?: shaMap.values.firstOrNull()
+        }
+
+        return Release(json.getString("tag_name"), selectedApk, sha, json.optString("body", ""))
     }
 
     private fun fromRedirect(repo: String): Release {
@@ -88,9 +114,21 @@ object Updater {
         c.disconnect()
         val tag = loc.substringAfter("/releases/tag/", "").substringBefore('?').trim('/')
         if (tag.isEmpty()) throw Exception("no release")
-        val apk = "https://github.com/$repo/releases/download/$tag/app-release.apk"
+        val primary = "https://github.com/$repo/releases/download/$tag/MetCode.apk"
+        val fallback = "https://github.com/$repo/releases/download/$tag/app-release.apk"
+        val apk = if (existsUrl(primary)) primary else fallback
         return Release(tag, apk, "$apk.sha256", "")
     }
+
+    private fun existsUrl(u: String): Boolean = try {
+        val c = URL(u).openConnection() as HttpURLConnection
+        c.requestMethod = "HEAD"
+        c.instanceFollowRedirects = true
+        c.connectTimeout = 5000; c.readTimeout = 5000
+        val code = c.responseCode
+        c.disconnect()
+        code in 200..399
+    } catch (_: Exception) { false }
 
     // ---------------------------------------------------------------- download and install
 
