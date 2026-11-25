@@ -17,6 +17,13 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.MotionEvent
 import android.view.View
+import android.graphics.Rect
+import android.text.InputType
+import org.json.JSONObject
+import androidx.core.content.ContextCompat
+import android.widget.ScrollView
+import android.widget.LinearLayout
+import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
 import android.text.util.Linkify
 import android.view.ViewGroup
@@ -42,6 +49,7 @@ class MainActivity : BaseActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var codeStore: StationCodeStore
     private lateinit var history: HistoryStore
+    private val autoFilled = HashMap<String, String>()
 
     private var selectedHeight = 0.0
     private var selectedLatDeg = 0.0
@@ -68,6 +76,7 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Locale.setDefault(Locale.US) // ASCII digits and "." in every number the app writes
+        Appearance.apply(this)
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -75,6 +84,7 @@ class MainActivity : BaseActivity() {
         Choices.load(this)
         setupChoices()
         setupMenu()
+        setupUi()
         codeStore = StationCodeStore(this)
         history = HistoryStore(this)
 
@@ -87,7 +97,9 @@ class MainActivity : BaseActivity() {
         setupSimpleSpinners()
         binding.tvSynopOut.setOnClickListener { copyText("SYNOP", currentSynop) }
         binding.tvMetarOut.setOnClickListener { copyText("METAR", currentMetar) }
-        binding.cbIncludeQnhInch.setOnCheckedChangeListener { _, _ -> scheduleRefresh() }
+        val appPrefs = getSharedPreferences("metcode_prefs", MODE_PRIVATE)
+        binding.cbIncludeQnhInch.isChecked = appPrefs.getBoolean("qnh_inch", false)
+        binding.cbIncludeQnhInch.setOnCheckedChangeListener { _, on -> appPrefs.edit().putBoolean("qnh_inch", on).apply(); scheduleRefresh() }
 
         binding.spVisUnit.setSelection(0)   // visibility unit: km
         setSpinnerValue(binding.spIX, "2")   // IX default 2
@@ -100,6 +112,7 @@ class MainActivity : BaseActivity() {
 
         // every field change rebuilds the codes at once
         attachRefreshWatchers(binding.root)
+        restoreStation()
         fillPhoneTime()
         refreshCodes()
     }
@@ -189,7 +202,7 @@ class MainActivity : BaseActivity() {
             when {
                 v is EditText -> Style.styleInput(this, v)
                 tag != null && tag.startsWith("g_") -> { v.setTextSize(TypedValue.COMPLEX_UNIT_SP, Style.size(this, "size_title", 14f)); Style.font(this, v) }
-                tag != null && tag.startsWith("l_") -> { v.setTextSize(TypedValue.COMPLEX_UNIT_SP, Style.size(this, "size_label", 13f)); Style.font(this, v) }
+                tag != null && tag.startsWith("l_") -> { v.setTextSize(TypedValue.COMPLEX_UNIT_SP, Style.size(this, "size_label", 12f)); Style.font(this, v) }
                 tag == "menu" -> { v.setTextSize(TypedValue.COMPLEX_UNIT_SP, Style.size(this, "size_menu", 16f)); Style.font(this, v) }
                 tag == "app_name" -> Style.font(this, v)
             }
@@ -200,17 +213,41 @@ class MainActivity : BaseActivity() {
     // ------------------------------------------------------------ menu, language, about
 
     private fun setupMenu() {
-        binding.btnMenu.setOnClickListener { v ->
+        val open = { v: View ->
             val popup = PopupMenu(this, v)
-            popup.menu.add(0, 1, 0, T("menu_language"))
-            popup.menu.add(0, 3, 1, Td("menu_update", "Update App", "به‌روزرسانی برنامه"))
-            popup.menu.add(0, 2, 2, T("menu_about"))
+            popup.menu.add(0, 5, 0, Td("menu_home", "Home", "خانه"))
+            popup.menu.add(0, 6, 1, Td("menu_reports", "Saved reports", "گزارش‌های ذخیره‌شده"))
+            popup.menu.add(0, 4, 2, Td("menu_station", "Station settings", "تنظیمات ایستگاه"))
+            popup.menu.add(0, 7, 3, Td("menu_dark", "Dark mode", "حالت شب"))
+            popup.menu.add(0, 1, 4, T("menu_language"))
+            popup.menu.add(0, 3, 5, Td("menu_update", "Update App", "به‌روزرسانی برنامه"))
+            popup.menu.add(0, 2, 6, T("menu_about"))
             popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) { 1 -> showLanguageDialog(); 2 -> showAbout(); 3 -> Updater.check(this) { k, en, fa -> Td(k, en, fa) } }
+                when (item.itemId) {
+                    1 -> showLanguageDialog(); 2 -> showAbout(); 3 -> Updater.check(this) { k, en, fa -> Td(k, en, fa) }
+                    4 -> showPageId(2); 5 -> showPageId(0); 6 -> showPageId(1); 7 -> showNightDialog()
+                }
                 true
             }
             popup.show()
         }
+        binding.btnMenu.setOnClickListener { open(it) }
+        binding.btnMenuStation.setOnClickListener { open(it) }
+        binding.btnMenuReports.setOnClickListener { open(it) }
+    }
+
+    private fun showNightDialog() {
+        val modes = arrayOf("off", "on", "system")
+        val labels = arrayOf(Td("night_off", "Off", "خاموش"), Td("night_on", "On", "روشن"), Td("night_system", "Use device settings", "استفاده از تنظیمات دستگاه"))
+        AlertDialog.Builder(this)
+            .setTitle(Td("menu_dark", "Dark mode", "حالت شب"))
+            .setSingleChoiceItems(labels, modes.indexOf(Appearance.get(this)).coerceAtLeast(0)) { d, which ->
+                d.dismiss()
+                Appearance.set(this, modes[which])
+                Appearance.apply(this)
+            }
+            .setNegativeButton(T("close"), null)
+            .show()
     }
 
     private fun showLanguageDialog() {
@@ -268,6 +305,346 @@ class MainActivity : BaseActivity() {
         for (sp in layerTypeSpinners) plain(sp, resources.getStringArray(R.array.cloud_types).toList())
         fill(binding.spTotalSnow, Choices.totalSnow)
         fill(binding.spFresh, Choices.freshSnow)
+    }
+
+    // ------------------------------------------------------------ pages, info cards, required fields, cloud rule
+
+    private fun setupUi() {
+        binding.root.viewTreeObserver.addOnGlobalLayoutListener {
+            val r = Rect()
+            binding.root.getWindowVisibleDisplayFrame(r)
+            val screen = binding.root.rootView.height
+            val keyboardOpen = screen - r.bottom > screen * 0.15
+            binding.bottomNav.visibility = if (keyboardOpen) View.GONE else View.VISIBLE
+        }
+        binding.spNh.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) { updateCloudDerived(); scheduleRefresh() }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+        binding.btnRefresh.setOnClickListener { fillPhoneTime() }
+        binding.chipStation.setOnClickListener { showPage(false); binding.actvStation.requestFocus() }
+        binding.navHome.setOnClickListener { showPage(true) }
+        binding.navStation.setOnClickListener { showPage(false) }
+        binding.navUpdate.setOnClickListener { Updater.check(this) { k, en, fa -> Td(k, en, fa) } }
+        binding.navAbout.setOnClickListener { showAbout() }
+        binding.btnSaveStation.setOnClickListener { saveStation() }
+        binding.navReports.setOnClickListener { showPageId(1) }
+        binding.tvNavReports.text = Td("nav_reports", "Reports", "گزارش‌ها")
+        binding.btnSaveReport.text = Td("btn_save_report", "Save report", "ذخیره گزارش")
+        binding.btnSaveReport.setOnClickListener { saveReport(false) }
+        binding.btnCompleteFromLast.text = Td("btn_complete", "Complete report based on last report", "تکمیل گزارش بر اساس آخرین گزارش")
+        binding.btnCompleteFromLast.setOnClickListener { completeFromLast() }
+        setupReports()
+        binding.btnSaveStation.text = Td("btn_save", "Save changes", "ذخیره تغییرات")
+        binding.btnCopySynop.setOnClickListener { saveReport(true); copyText("SYNOP", currentSynop) }
+        binding.btnCopyMetar.setOnClickListener { saveReport(true); copyText("METAR", currentMetar) }
+        binding.tvStationTitle.text = Td("g_station", "Station settings", "تنظیمات ایستگاه")
+        binding.tvNavHome.text = Td("nav_home", "Home", "خانه")
+        binding.tvNavStation.text = Td("nav_station", "Station", "ایستگاه")
+        binding.tvNavUpdate.text = Td("nav_update", "Update", "به‌روزرسانی")
+        binding.tvNavAbout.text = T("menu_about")
+        binding.btnCopySynop.text = Td("copy_synop", "Copy SYNOP", "کپی SYNOP")
+        binding.btnCopyMetar.text = Td("copy_metar", "Copy METAR", "کپی METAR")
+
+        // cloud height: type the metres, or open the list (WMO table 1677) with the arrow; the code is shown under the box
+        val w = (320 * resources.displayMetrics.density).toInt()
+        val captions = listOf(binding.tvCloud1Code, binding.tvCloud2Code, binding.tvCloud3Code, binding.tvCloud4Code)
+        for (i in 0 until 4) {
+            val f = layerHeightFields[i]
+            f.setAdapter(HeightAdapter(this))
+            f.threshold = 100000
+            f.dropDownWidth = w
+            enableArrowDropdown(f)
+            f.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    val hm = f.int()
+                    captions[i].text = if (hm == null) "" else "hshs " + "%02d".format(CloudTypes.hshsCode(hm))
+                }
+            })
+        }
+        showPage(true)
+    }
+
+    /** Tapping the arrow at the end of the box opens its list; tapping elsewhere lets you type. */
+    private fun enableArrowDropdown(field: AutoCompleteTextView) {
+        field.setOnTouchListener { v, ev ->
+            if (ev.action == MotionEvent.ACTION_UP) {
+                val arrow = (v as TextView).compoundDrawablesRelative[2]
+                val reach = (arrow?.bounds?.width() ?: 0) + (16 * resources.displayMetrics.density).toInt()
+                val rtl = v.layoutDirection == View.LAYOUT_DIRECTION_RTL
+                val hit = if (rtl) ev.x <= v.paddingLeft + reach else ev.x >= v.width - v.paddingRight - reach
+                if (hit) {
+                    (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(v.windowToken, 0)
+                    field.showDropDown()
+                    v.performClick()
+                    return@setOnTouchListener true
+                }
+            }
+            false
+        }
+    }
+
+    private fun showPage(home: Boolean) = showPageId(if (home) 0 else 2)
+
+    /** 0 = Home, 1 = Saved reports, 2 = Station settings. */
+    private fun showPageId(id: Int) {
+        show(binding.pageHome, id == 0)
+        show(binding.pageReports, id == 1)
+        show(binding.pageStation, id == 2)
+        binding.navHome.isSelected = id == 0
+        binding.navReports.isSelected = id == 1
+        binding.navStation.isSelected = id == 2
+        if (id == 1) refreshReportList()
+    }
+
+    /** Station values shown on the Home cards and in the header chip. */
+    private fun updateInfoCards() {
+        fun v(f: EditText) = f.text.toString().trim().ifEmpty { "\u2014" }
+        binding.tvElev.text = v(binding.etHeight)
+        binding.tvLat.text = v(binding.etLatN)
+        binding.tvLon.text = v(binding.etLonE)
+        binding.tvIcao.text = v(binding.etMetarCode)
+        binding.tvWmo.text = v(binding.etSynopCode)
+        binding.tvStationChip.text = if (selectedStationName.isEmpty()) Td("chip_hint", "Select a station", "انتخاب ایستگاه") else selectedStationName
+    }
+
+    /** A red border marks a box the codes cannot be built without; it goes away once the box (or its alternative) is filled. */
+    private fun updateRequired() {
+        fun req(v: View, missing: Boolean) = v.setBackgroundResource(if (missing) R.drawable.bg_field_required else R.drawable.bg_field)
+        fun blank(f: EditText) = f.text.isNullOrBlank()
+        // station: the name chip on the main page (and the search box on the station page) until a station is chosen
+        val noStation = selectedStationName.isEmpty()
+        binding.chipStation.setBackgroundResource(if (noStation) R.drawable.bg_chip_required else R.drawable.bg_chip)
+        req(binding.actvStation, noStation)
+        // pressure: QFE, or the barometer reading with its attached thermometer
+        val noQfe = blank(binding.etQFE)
+        req(binding.etQFE, noQfe && (blank(binding.etBarPress) || blank(binding.etBarTemp)))
+        req(binding.etBarPress, noQfe && blank(binding.etBarPress))
+        req(binding.etBarTemp, noQfe && blank(binding.etBarTemp))
+        // wind, and the pressure tendency (calculated from the three earlier pressures)
+        req(binding.etDd, blank(binding.etDd))
+        req(binding.etFf, blank(binding.etFf))
+        req(binding.spA3.parent as View, spinnerText(binding.spA3) == "/")
+        req(binding.etPpp3, blank(binding.etPpp3))
+        // the three earlier pressures (for the pressure tendency) and the rain amount of this hour
+        req(binding.etP1, blank(binding.etP1))
+        req(binding.etP2, blank(binding.etP2))
+        req(binding.etP3, blank(binding.etP3))
+        fun shown(f: EditText) = (f.parent as View).visibility == View.VISIBLE
+        req(binding.etR1h, shown(binding.etR1h) && blank(binding.etR1h))
+        req(binding.etR6h, shown(binding.etR6h) && blank(binding.etR6h))
+        // temperature: T12, dry bulb, and wet bulb or humidity
+        req(binding.etT12, blank(binding.etT12))
+        req(binding.etDry, blank(binding.etDry))
+        val noHumidity = blank(binding.etWet) && blank(binding.etRH)
+        req(binding.etWet, noHumidity)
+        req(binding.etRH, noHumidity)
+    }
+
+    // ------------------------------------------------------------ saved reports
+
+    /** The entries that "Complete report based on last report" copies: visibility, present weather, N, h and the cloud layers. */
+    private fun snapshotFields(): JSONObject {
+        val o = JSONObject()
+        o.put("vis", binding.etVis.text.toString()).put("visUnit", spinnerText(binding.spVisUnit)).put("vertVis", binding.etVertVis.text.toString())
+        o.put("ix", spinnerText(binding.spIX)).put("ww", spinnerText(binding.spWW)).put("w1", spinnerText(binding.spW1)).put("w2", spinnerText(binding.spW2))
+        o.put("n", spinnerText(binding.spN)).put("h", spinnerText(binding.spH))
+        for (i in 0 until 4) {
+            o.put("c${i + 1}v", spinnerText(layerValueSpinners[i])).put("c${i + 1}t", spinnerText(layerTypeSpinners[i])).put("c${i + 1}h", layerHeightFields[i].text.toString())
+        }
+        return o
+    }
+
+    /** Saves the report on screen (an older one of the same station and hour is replaced). */
+    private fun saveReport(quiet: Boolean): Boolean {
+        val day = binding.etDay.int()
+        val hour = binding.etHour.int()?.takeIf { it in 0..23 }
+        if (selectedStationName.isEmpty() || day == null || hour == null || !currentSynop.contains("NNNN")) {
+            if (!quiet) Toast.makeText(this, Td("report_no", "Select a station and fill in the report first", "ابتدا ایستگاه را انتخاب و گزارش را تکمیل کنید"), Toast.LENGTH_SHORT).show()
+            return false
+        }
+        val c = history.timeKey(day, hour, 0).second
+        ReportStore.upsert(this, Report(System.currentTimeMillis(), selectedStationName, c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1,
+            c.get(Calendar.DAY_OF_MONTH), hour, currentSynop, currentMetar, binding.etDry.num(), binding.etQFE.num(), snapshotFields()))
+        if (!quiet) Toast.makeText(this, Td("report_saved", "Report saved", "گزارش ذخیره شد"), Toast.LENGTH_SHORT).show()
+        return true
+    }
+
+    /** Fills only visibility, present weather, N, h and the cloud layers from the newest saved report of this station. */
+    private fun completeFromLast() {
+        val last = ReportStore.last(ReportStore.load(this), selectedStationName)
+        if (last == null) {
+            Toast.makeText(this, Td("report_none", "There is no saved report yet", "هنوز گزارشی ذخیره نشده است"), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val o = last.fields
+        val unit = o.optString("visUnit", "km")
+        visInMeters = unit == "m"                    // so the unit box does not convert the value a second time
+        setSpinnerValue(binding.spVisUnit, unit)
+        binding.etVis.setText(o.optString("vis"))
+        setSpinnerValue(binding.spIX, o.optString("ix", "2"))
+        applyIxLock()
+        if (binding.spWW.isEnabled) {
+            setSpinnerValue(binding.spWW, o.optString("ww")); setSpinnerValue(binding.spW1, o.optString("w1")); setSpinnerValue(binding.spW2, o.optString("w2"))
+        }
+        setSpinnerValue(binding.spN, o.optString("n", "0"))
+        onNChanged()
+        binding.etVertVis.setText(o.optString("vertVis"))
+        if (binding.spH.isEnabled) setSpinnerValue(binding.spH, o.optString("h", "/"))
+        for (i in 0 until 4) {
+            setSpinnerValue(layerValueSpinners[i], o.optString("c${i + 1}v", "-"))
+            applyLayerEnable(i)
+            setSpinnerValue(layerTypeSpinners[i], o.optString("c${i + 1}t", "-"))
+            layerHeightFields[i].setText(o.optString("c${i + 1}h"))
+        }
+        updateCloudDerived()
+        scheduleRefresh()
+        Toast.makeText(this, Td("report_completed", "Completed from the last report", "از آخرین گزارش تکمیل شد"), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun setupReports() {
+        binding.tvReportsTitle.text = Td("reports_title", "Saved reports", "گزارش‌های ذخیره‌شده")
+        binding.tvReportsEmpty.text = Td("reports_empty", "No saved reports found", "گزارشی پیدا نشد")
+        binding.etFYear.hint = Td("f_year", "Year", "سال")
+        binding.etFMonth.hint = Td("f_month", "Month", "ماه")
+        binding.etFDay.hint = Td("f_day", "Day", "روز")
+        binding.etFHour.hint = Td("f_hour", "Hour", "ساعت")
+        val w = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) { refreshReportList() }
+        }
+        for (f in listOf(binding.etFYear, binding.etFMonth, binding.etFDay, binding.etFHour)) f.addTextChangedListener(w)
+    }
+
+    /** The list below the search boxes: newest first, filtered by the year, month, day and hour that are typed. */
+    private fun refreshReportList() {
+        val y = binding.etFYear.int(); val mo = binding.etFMonth.int(); val d = binding.etFDay.int(); val h = binding.etFHour.int()
+        val list = ReportStore.load(this)
+            .filter { (y == null || it.year == y) && (mo == null || it.month == mo) && (d == null || it.day == d) && (h == null || it.hour == h) }
+            .sortedByDescending { it.sortKey }
+        binding.llReports.removeAllViews()
+        show(binding.tvReportsEmpty, list.isEmpty())
+        val dp = resources.displayMetrics.density
+        for (r in list.take(200)) {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_card)
+                setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
+                isClickable = true
+                setOnClickListener { editReport(r) }
+            }
+            card.addView(TextView(this).apply {
+                text = "%04d/%02d/%02d   %02d:00 UTC   \u00B7   %s".format(r.year, r.month, r.day, r.hour, r.station)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.primary)); setTypeface(typeface, Typeface.BOLD); textSize = 14f
+                layoutDirection = View.LAYOUT_DIRECTION_LTR
+            })
+            for (code in listOf(r.synop, r.metar)) card.addView(TextView(this).apply {
+                text = code.replace("\nNNNN", "").replace('\n', ' ')
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_dark)); typeface = Typeface.MONOSPACE; textSize = 11f
+                layoutDirection = View.LAYOUT_DIRECTION_LTR; textDirection = View.TEXT_DIRECTION_LTR
+                setPadding(0, (4 * dp).toInt(), 0, 0)
+            })
+            binding.llReports.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt()) })
+        }
+    }
+
+    /** Edit, delete or copy a saved report. */
+    private fun editReport(r: Report) {
+        val dp = resources.displayMetrics.density
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding((20 * dp).toInt(), (8 * dp).toInt(), (20 * dp).toInt(), 0) }
+        fun field(label: String, value: String, type: Int, multi: Boolean = false): EditText {
+            col.addView(TextView(this).apply { text = label; textSize = 12f; setTextColor(ContextCompat.getColor(this@MainActivity, R.color.label_gray)); setPadding(0, (10 * dp).toInt(), 0, 0) })
+            val e = EditText(this).apply {
+                setText(value); inputType = type or (if (multi) InputType.TYPE_TEXT_FLAG_MULTI_LINE else 0)
+                if (multi) { typeface = Typeface.MONOSPACE; textSize = 12f; layoutDirection = View.LAYOUT_DIRECTION_LTR; textDirection = View.TEXT_DIRECTION_LTR }
+            }
+            col.addView(e)
+            return e
+        }
+        val num = InputType.TYPE_CLASS_NUMBER
+        val dec = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+        val eSt = field(Td("l_station", "Station", "ایستگاه"), r.station, InputType.TYPE_CLASS_TEXT)
+        val eY = field(Td("f_year", "Year", "سال"), r.year.toString(), num)
+        val eMo = field(Td("f_month", "Month", "ماه"), r.month.toString(), num)
+        val eD = field(Td("f_day", "Day", "روز"), r.day.toString(), num)
+        val eH = field(Td("f_hour", "Hour", "ساعت"), r.hour.toString(), num)
+        val eT = field(T("l_t"), r.dry?.f1() ?: "", dec)
+        val eQ = field(T("l_qfe_hpa"), r.qfe?.f1() ?: "", dec)
+        val eS = field("SYNOP", r.synop, InputType.TYPE_CLASS_TEXT, true)
+        val eM = field("METAR", r.metar, InputType.TYPE_CLASS_TEXT, true)
+        val sv = ScrollView(this).apply { addView(col) }
+        AlertDialog.Builder(this)
+            .setTitle(Td("report_edit", "Edit report", "ویرایش گزارش"))
+            .setView(sv)
+            .setPositiveButton(Td("btn_save", "Save changes", "ذخیره تغییرات")) { _, _ ->
+                r.station = eSt.text.toString().trim().ifEmpty { r.station }
+                r.year = eY.text.toString().toIntOrNull() ?: r.year
+                r.month = (eMo.text.toString().toIntOrNull() ?: r.month).coerceIn(1, 12)
+                r.day = (eD.text.toString().toIntOrNull() ?: r.day).coerceIn(1, 31)
+                r.hour = (eH.text.toString().toIntOrNull() ?: r.hour).coerceIn(0, 23)
+                r.dry = parseNumber(eT.text.toString()); r.qfe = parseNumber(eQ.text.toString())
+                r.synop = eS.text.toString(); r.metar = eM.text.toString()
+                ReportStore.upsert(this, r)
+                refreshReportList()
+            }
+            .setNeutralButton(Td("delete", "Delete", "حذف")) { _, _ -> ReportStore.delete(this, r.id); refreshReportList() }
+            .setNegativeButton(T("close"), null)
+            .show()
+    }
+
+    // ------------------------------------------------------------ keeping the station settings
+
+    private fun stationPrefs() = getSharedPreferences("metcode_station", MODE_PRIVATE)
+
+    /** "Save changes" on the station page: the station and its values are kept for the next time the app opens. */
+    private fun saveStation() {
+        stationPrefs().edit()
+            .putString("name", selectedStationName)
+            .putString("height", binding.etHeight.text.toString())
+            .putString("lat", binding.etLatN.text.toString())
+            .putString("lon", binding.etLonE.text.toString())
+            .putString("wmo", binding.etSynopCode.text.toString())
+            .putString("icao", binding.etMetarCode.text.toString())
+            .commit()
+        Toast.makeText(this, Td("saved", "Saved", "ذخیره شد"), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun restoreStation() {
+        val p = stationPrefs()
+        val name = p.getString("name", "") ?: ""
+        if (name.isEmpty()) return
+        selectedStationName = name
+        binding.actvStation.setText(name, false)
+        binding.etHeight.setText(p.getString("height", ""))
+        binding.etLatN.setText(p.getString("lat", ""))
+        binding.etLonE.setText(p.getString("lon", ""))
+        binding.etSynopCode.setText(p.getString("wmo", ""))
+        binding.etMetarCode.setText(p.getString("icao", ""))
+    }
+
+    /** Highest cloud amount (oktas) among the entered layers of one category (CL, CM or CH). */
+    private fun categoryOktas(layers: List<CloudTypes.CloudLayer>, cat: CloudCategory): Int =
+        layers.mapNotNull { l ->
+            val k = CloudTypes.amountToOktas(l.amount)
+            if (k != null && k > 0 && CloudTypes.legend[l.typeLabel]?.category == cat) k else null
+        }.maxOrNull() ?: 0
+
+    /** CM and CH as written in the code: "/" when low cloud covers 8/8 (CM and CH hidden), or medium cloud covers 8/8 (CH hidden). */
+    private fun cloudDigits(layers: List<CloudTypes.CloudLayer>, d: CloudTypes.DerivedCloudGroup): Pair<String, String> {
+        val low = categoryOktas(layers, CloudCategory.CL)
+        val medium = categoryOktas(layers, CloudCategory.CM)
+        val cm = if (low == 8) "/" else d.cm.toString()
+        val ch = if (low == 8 || medium == 8) "/" else d.ch.toString()
+        return cm to ch
+    }
+
+    private fun cloud8(d: CloudTypes.DerivedCloudGroup, layers: List<CloudTypes.CloudLayer>): String {
+        val (cm, ch) = cloudDigits(layers, d)
+        val nh = if (binding.spNh.selectedItemPosition > 0) spinnerText(binding.spNh) else d.nh.toString()
+        return "8$nh${d.cl}$cm$ch"
     }
 
     // ----------------------------------------------------- live code refresh plumbing
@@ -537,13 +914,22 @@ class MainActivity : BaseActivity() {
         binding.etP2.hint = boldText(fmt("fmt_qfe_utc", history.hourOf(day, hour, 2)))
         binding.etP3.hint = boldText(fmt("fmt_qfe_utc", history.hourOf(day, hour, 3)))
         if (selectedStationName.isEmpty()) return
-        history.load(selectedStationName, day, hour, 12)?.temp?.let {
-            if (binding.etT12.text.isNullOrBlank()) { setField(binding.etT12, it.f1()); handle(Trigger.T12) }
+        val saved = ReportStore.load(this)
+        fun at(back: Int): Report? {
+            val c = history.timeKey(day, hour, back).second
+            return ReportStore.find(saved, selectedStationName, c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.HOUR_OF_DAY))
         }
+        // a value that came from a saved report is replaced when the hour changes; a value the user typed is kept
+        fun fill(key: String, f: EditText, value: Double?) {
+            val cur = f.text.toString()
+            if (cur.isBlank() || cur == autoFilled[key]) {
+                if (value != null) { setField(f, value.f1()); autoFilled[key] = value.f1() } else { if (cur.isNotBlank()) setField(f, ""); autoFilled.remove(key) }
+            }
+        }
+        fill("t12", binding.etT12, at(12)?.dry)
+        handle(Trigger.T12)
         val fields = listOf(binding.etP1, binding.etP2, binding.etP3)
-        for (k in 1..3) {
-            history.load(selectedStationName, day, hour, k)?.qfe?.let { if (fields[k - 1].text.isNullOrBlank()) setField(fields[k - 1], it.f1()) }
-        }
+        for (k in 1..3) fill("p$k", fields[k - 1], at(k)?.qfe)
         updateTendency()
     }
 
@@ -630,9 +1016,41 @@ class MainActivity : BaseActivity() {
         CloudTypes.CloudLayer(spinnerText(layerValueSpinners[i]), spinnerText(layerTypeSpinners[i]), layerHeightFields[i].int())
     }
 
+    private var nhItems: List<String> = emptyList()
+
+    /** Nh choices: Auto, then 0 up to the total cloud amount N (never 9), then "/". */
+    private fun nhOptions(): List<String> {
+        val n = spinnerText(binding.spN)
+        val k = n.toIntOrNull()
+        val nums = when {
+            k != null && k in 1..8 -> (0..k).map { it.toString() }
+            n == "0" -> listOf("0")
+            n == "TR" -> listOf("0", "1")
+            else -> emptyList()
+        }
+        return listOf(Td("nh_auto", "Auto", "خودکار")) + nums + listOf("/")
+    }
+
+    private fun refreshNhSpinner() {
+        val items = nhOptions()
+        if (items == nhItems) return
+        val previous = if (nhItems.isNotEmpty() && binding.spNh.selectedItemPosition > 0) spinnerText(binding.spNh) else null
+        nhItems = items
+        binding.spNh.adapter = StyledArrayAdapter(this, items)
+        val pos = if (previous != null) items.indexOf(previous) else 0
+        binding.spNh.setSelection(if (pos >= 0) pos else 0)
+    }
+
+    /** CL, CM and CH are filled by the app; Nh follows the layers (Auto) or the value picked from the list. */
     private fun updateCloudDerived() {
-        val d = CloudTypes.derive(readCloudLayers())
-        binding.tvCloudDerived.text = "Nh:${d.nh}  CL:${d.cl}  CM:${d.cm}  CH:${d.ch}"
+        val layers = readCloudLayers()
+        val d = CloudTypes.derive(layers)
+        val (cm, ch) = cloudDigits(layers, d)
+        binding.tvCL.text = d.cl.toString()
+        binding.tvCM.text = cm
+        binding.tvCH.text = ch
+        refreshNhSpinner()
+        binding.tvNhLabel.text = if (binding.spNh.selectedItemPosition <= 0) "Nh  \u2192 ${d.nh}" else "Nh"
     }
 
     private fun setupVisibilityUnit() {
@@ -657,6 +1075,8 @@ class MainActivity : BaseActivity() {
      * (so 1//// 2//// 3//// 4//// 5//// appear until the values exist). Only a selected station is required.
      */
     private fun refreshCodes() {
+        updateInfoCards()
+        updateRequired()
         if (selectedStationName.isEmpty()) {
             currentSynop = ""; currentMetar = ""
             binding.tvSynopOut.textDirection = View.TEXT_DIRECTION_FIRST_STRONG
@@ -699,8 +1119,6 @@ class MainActivity : BaseActivity() {
         }
         val cloud = CloudTypes.derive(layers)
 
-        if (day != null && hour != null) history.save(selectedStationName, day, hour, dry, qfe)
-
         currentSynop = buildSynop(day, hour, hr, ir, synopCode, dry, wet, rh, dewPoint, qfe, qff, dd, ff, variable, visM, n, h, ix, validLayers, cloud)
         currentMetar = buildMetar(day, hour, metarCode, dry, dewPoint, qnh, qnhInch, dd, ffExact, gustExact, variable, visM, n, ix, validLayers)
         // the codes always read left to right, also in Persian
@@ -736,7 +1154,7 @@ class MainActivity : BaseActivity() {
                 spinnerText(binding.spW1).toIntOrNull() ?: 0,
                 spinnerText(binding.spW2).toIntOrNull() ?: 0))
         }
-        if (validLayers.isNotEmpty()) g.add(SynopEncoder.group8_clouds(cloud.nh, cloud.cl, cloud.cm, cloud.ch))
+        if (validLayers.isNotEmpty()) g.add(cloud8(cloud, validLayers))
 
         // ---- Section 3
         val s3 = mutableListOf<String>()

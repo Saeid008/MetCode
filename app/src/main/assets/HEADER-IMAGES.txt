@@ -1,0 +1,10 @@
+Header pictures of the main page (the sky with the weather station)
+-------------------------------------------------------------------
+Light mode : app/src/main/res/drawable-nodpi/header_bg.png
+Dark mode  : app/src/main/res/drawable-night-nodpi/header_bg.png
+
+Size       : 1080 x 540 pixels (ratio 2:1). A sharper picture with the same ratio, for example 1440 x 720, also works.
+Format     : PNG (keep the file name header_bg.png). For a JPG, name it header_bg.jpg and delete the PNG of the same mode.
+Tips       : keep the left side (weather station) and the right side (station name chip) free of text; the bottom
+             edge should fade into the page colour (light: #D6E8FA, dark: #0E1A2B).
+After replacing the files, rebuild the app.

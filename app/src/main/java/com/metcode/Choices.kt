@@ -91,3 +91,33 @@ object Choices {
         freshSnow = listOf(none) + freshSnowSpecial
     }
 }
+
+/** Cloud base height list from WMO code table 1677 (hshs): "code - metres". Picking an item puts the metres into the box. */
+class HeightAdapter(context: Context) : ArrayAdapter<Pair<Int, Int>>(context, R.layout.spinner_item, items()) {
+
+    companion object {
+        /** hshs code -> base height in metres (00 = below 30 m, 01-50 = 30 m steps, 56-80 = 300 m steps, 81-89 = 1500 m steps). */
+        fun items(): List<Pair<Int, Int>> {
+            val l = mutableListOf(0 to 0)
+            for (c in 1..50) l.add(c to c * 30)
+            for (c in 56..80) l.add(c to (c - 50) * 300)
+            for (c in 81..89) l.add(c to 9000 + (c - 80) * 1500)
+            return l
+        }
+    }
+
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+        val v = super.getView(position, convertView, parent) as TextView
+        val (code, m) = getItem(position)!!
+        v.text = if (code == 0) "00 \u2014 < 30 m" else "%02d \u2014 %d m".format(code, m)
+        v.isSingleLine = true
+        return Style.styleInput(context, v)
+    }
+
+    override fun getFilter(): Filter = object : Filter() {
+        override fun performFiltering(constraint: CharSequence?) = FilterResults().apply { val all = items(); values = all; count = all.size }
+        override fun publishResults(constraint: CharSequence?, results: FilterResults?) { notifyDataSetChanged() }
+        @Suppress("UNCHECKED_CAST")
+        override fun convertResultToString(resultValue: Any?) = (resultValue as Pair<Int, Int>).second.toString()
+    }
+}
