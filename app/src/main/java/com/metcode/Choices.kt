@@ -1,6 +1,9 @@
 package com.metcode
 
 import android.content.Context
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.BitmapFactory
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -13,7 +16,7 @@ class Choice(val code: String, val desc: String, val label: String = code) {
 }
 
 /** Closed spinner shows only the code; the open list shows "code - description" in the app language. */
-class ChoiceAdapter(context: Context, items: List<Choice>) :
+class ChoiceAdapter(context: Context, items: List<Choice>, private val iconDir: String? = null) :
     ArrayAdapter<Choice>(context, R.layout.spinner_item, items) {
 
     init { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
@@ -25,11 +28,42 @@ class ChoiceAdapter(context: Context, items: List<Choice>) :
         v.isSingleLine = false
         v.maxLines = 5
         v.ellipsize = null
+        if (iconDir != null) {
+            // small picture before the text: assets/icons/<iconDir>/<code>.png
+            v.setCompoundDrawablesRelative(Icons.get(context, iconDir, c.code), null, null, null)
+            v.compoundDrawablePadding = (10 * context.resources.displayMetrics.density).toInt()
+        }
         return Style.styleInput(context, v)
     }
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
         Style.styleInput(context, super.getView(position, convertView, parent) as TextView)
+}
+
+/** Small pictures for the lists of a3, ww, W1 and W2: assets/icons/a3/0.png, assets/icons/ww/00.png, assets/icons/past/0.png ("/" is slash.png). */
+object Icons {
+    fun get(c: Context, dir: String, code: String): Drawable? {
+        val name = if (code == "/") "slash" else code
+        return try {
+            val bmp = c.assets.open("icons/$dir/$name.png").use { BitmapFactory.decodeStream(it) } ?: return null
+            val size = (28 * c.resources.displayMetrics.density).toInt()
+            BitmapDrawable(c.resources, bmp).apply { setBounds(0, 0, size, size) }
+        } catch (_: Exception) { null }
+    }
+}
+
+/** Wind direction list: 000, 010 ... 360, 099 (variable) and "/"; the box also accepts typing. */
+class DirectionAdapter(context: Context) : ArrayAdapter<String>(context, R.layout.spinner_item, items()) {
+    companion object {
+        fun items(): List<String> = (0..36).map { "%03d".format(it * 10) } + listOf("099", "/")
+    }
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+        Style.styleInput(context, super.getView(position, convertView, parent) as TextView)
+    override fun getFilter(): Filter = object : Filter() {
+        override fun performFiltering(constraint: CharSequence?) = FilterResults().apply { val all = items(); values = all; count = all.size }
+        override fun publishResults(constraint: CharSequence?, results: FilterResults?) { notifyDataSetChanged() }
+        override fun convertResultToString(resultValue: Any?) = resultValue.toString()
+    }
 }
 
 /** Plain text list (N, unit, cloud type...) with the app text size and font. */

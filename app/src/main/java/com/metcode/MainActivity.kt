@@ -217,6 +217,7 @@ class MainActivity : BaseActivity() {
             val popup = PopupMenu(this, v)
             popup.menu.add(0, 5, 0, Td("menu_home", "Home", "خانه"))
             popup.menu.add(0, 6, 1, Td("menu_reports", "Saved reports", "گزارش‌های ذخیره‌شده"))
+            popup.menu.add(0, 8, 1, Td("menu_minmax", "MinMx Report", "گزارش MinMx"))
             popup.menu.add(0, 4, 2, Td("menu_station", "Station settings", "تنظیمات ایستگاه"))
             popup.menu.add(0, 7, 3, Td("menu_dark", "Dark mode", "حالت شب"))
             popup.menu.add(0, 1, 4, T("menu_language"))
@@ -225,7 +226,7 @@ class MainActivity : BaseActivity() {
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> showLanguageDialog(); 2 -> showAbout(); 3 -> Updater.check(this) { k, en, fa -> Td(k, en, fa) }
-                    4 -> showPageId(2); 5 -> showPageId(0); 6 -> showPageId(1); 7 -> showNightDialog()
+                    4 -> showPageId(2); 5 -> showPageId(0); 6 -> showPageId(1); 8 -> showPageId(3); 7 -> showNightDialog()
                 }
                 true
             }
@@ -234,6 +235,7 @@ class MainActivity : BaseActivity() {
         binding.btnMenu.setOnClickListener { open(it) }
         binding.btnMenuStation.setOnClickListener { open(it) }
         binding.btnMenuReports.setOnClickListener { open(it) }
+        binding.btnMenuMinMx.setOnClickListener { open(it) }
     }
 
     private fun showNightDialog() {
@@ -283,17 +285,17 @@ class MainActivity : BaseActivity() {
 
     private fun setupChoices() {
         val w = (320 * resources.displayMetrics.density).toInt()
-        fun fill(sp: Spinner, items: List<Choice>) { sp.adapter = ChoiceAdapter(this, items); sp.dropDownWidth = w }
-        fill(binding.spA3, Choices.a3)
+        fun fill(sp: Spinner, items: List<Choice>, icons: String? = null) { sp.adapter = ChoiceAdapter(this, items, icons); sp.dropDownWidth = w }
+        fill(binding.spA3, Choices.a3, "a3")
         fill(binding.spE, Choices.e)
         fill(binding.spEPrime, Choices.ePrime)
         fill(binding.spH, Choices.h)
-        fill(binding.spWW, Choices.ww)
+        fill(binding.spWW, Choices.ww, "ww")
         fill(binding.spIW, Choices.iw)
         fill(binding.spIR, Choices.ir)
         fill(binding.spIX, Choices.ix)
-        fill(binding.spW1, Choices.past)
-        fill(binding.spW2, Choices.past)
+        fill(binding.spW1, Choices.past, "past")
+        fill(binding.spW2, Choices.past, "past")
         fun plain(sp: Spinner, items: List<String>) {
             val keep = sp.selectedItemPosition
             sp.adapter = StyledArrayAdapter(this, items)
@@ -327,6 +329,28 @@ class MainActivity : BaseActivity() {
         binding.navStation.setOnClickListener { showPage(false) }
         binding.navUpdate.setOnClickListener { Updater.check(this) { k, en, fa -> Td(k, en, fa) } }
         binding.navAbout.setOnClickListener { showAbout() }
+        // wind direction boxes: type it or pick 000 ... 360, 099 (variable) or "/" from the list; wind speed up to 0.4 means calm = 000
+        val wd = (200 * resources.displayMetrics.density).toInt()
+        for (f in listOf(binding.etDd, binding.etMaxWindDd, binding.etMaxGustDd, binding.etMmMaxDd)) {
+            f.setAdapter(DirectionAdapter(this)); f.threshold = 100000; f.dropDownWidth = wd; enableArrowDropdown(f)
+        }
+        fun calm(ff: EditText, dd: AutoCompleteTextView) {
+            var auto = false
+            ff.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    val v = ff.num() ?: return
+                    if (v <= 0.4) { if (dd.text.toString() != "000") dd.setText("000"); auto = true }
+                    else if (auto && dd.text.toString() == "000") { dd.setText(""); auto = false }
+                }
+            })
+        }
+        calm(binding.etFf, binding.etDd); calm(binding.etMaxWindFf, binding.etMaxWindDd)
+        calm(binding.etMaxGustFf, binding.etMaxGustDd); calm(binding.etMmMaxFf, binding.etMmMaxDd)
+        // T12 and the three earlier pressures have a long hint (for example "Temp 02:00 UTC"): a little smaller text so it fits
+        for (f in listOf(binding.etT12, binding.etP1, binding.etP2, binding.etP3)) f.setTextSize(TypedValue.COMPLEX_UNIT_SP, Style.size(this, "size_input", 14f) - 2f)
+        setupMinMx()
         binding.btnSaveStation.setOnClickListener { saveStation() }
         binding.navReports.setOnClickListener { showPageId(1) }
         binding.tvNavReports.text = Td("nav_reports", "Reports", "گزارش‌ها")
@@ -388,15 +412,19 @@ class MainActivity : BaseActivity() {
 
     private fun showPage(home: Boolean) = showPageId(if (home) 0 else 2)
 
-    /** 0 = Home, 1 = Saved reports, 2 = Station settings. */
+    /** 0 = Home, 1 = Saved reports, 2 = Station settings, 3 = MinMx report. */
     private fun showPageId(id: Int) {
         show(binding.pageHome, id == 0)
         show(binding.pageReports, id == 1)
         show(binding.pageStation, id == 2)
+        show(binding.pageMinMx, id == 3)
+        show(binding.codePanel, id != 3)
         binding.navHome.isSelected = id == 0
         binding.navReports.isSelected = id == 1
         binding.navStation.isSelected = id == 2
+        binding.navMinMx.isSelected = id == 3
         if (id == 1) refreshReportList()
+        if (id == 3) updateMinMxPage()
     }
 
     /** Station values shown on the Home cards and in the header chip. */
@@ -443,12 +471,115 @@ class MainActivity : BaseActivity() {
         req(binding.etRH, noHumidity)
     }
 
+    // ------------------------------------------------------------ MinMx report (05 and 12 UTC)
+
+    private fun mmHour(): Int? = binding.etHour.int()?.takeIf { it in 0..23 }
+
+    private fun setupMinMx() {
+        binding.navMinMx.setOnClickListener { showPageId(3) }
+        binding.tvNavMinMx.text = "MinMx"
+        binding.tvMinMxTitle.text = Td("mm_title", "MinMx Report", "گزارش MinMx")
+        binding.tvMmT05.text = Td("mm_t05", "05 UTC: humidity, minimum temperature and maximum wind", "ساعت 05 UTC: رطوبت، کمینهٔ دما و بیشینهٔ باد")
+        binding.tvMmT12.text = Td("mm_t12", "12 UTC: maximum temperature", "ساعت 12 UTC: بیشینهٔ دما")
+        binding.tvMmNone.text = Td("mm_none", "The MinMx report is made at 05 UTC and 12 UTC. Change the hour on the Home page.", "گزارش MinMx در ساعت 05 و 12 UTC تهیه می‌شود. ساعت را در صفحه خانه تغییر دهید.")
+        binding.tvMmL1.text = Td("mm_maxrh", "Max Humidity (%)", "بیشینهٔ رطوبت (%)")
+        binding.tvMmL2.text = Td("mm_minrh", "Min Humidity (%)", "کمینهٔ رطوبت (%)")
+        binding.tvMmL3.text = Td("mm_mint", "Min Temp (°C)", "کمینهٔ دما (°C)")
+        binding.tvMmL4.text = Td("mm_maxff", "Max Wind Speed (m/s)", "بیشینهٔ سرعت باد (m/s)")
+        binding.tvMmL5.text = Td("mm_maxdd", "Max Wind Direction (°)", "جهت بیشینهٔ باد (°)")
+        binding.tvMmL6.text = Td("mm_maxt", "Max Temp (°C)", "بیشینهٔ دما (°C)")
+        binding.btnMmSave.text = Td("btn_save_report", "Save report", "ذخیره گزارش")
+        binding.btnMmCopy.text = Td("mm_copy", "Copy MinMx", "کپی MinMx")
+        binding.btnMmSave.setOnClickListener { saveMinMx(false) }
+        binding.btnMmCopy.setOnClickListener { saveMinMx(true); copyText("MinMx", minMxCode()) }
+        val w = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) { binding.tvMinMxOut.text = minMxCode() }
+        }
+        for (f in listOf(binding.etMmMaxRh, binding.etMmMinRh, binding.etMmMinT, binding.etMmMaxFf, binding.etMmMaxDd, binding.etMmMaxT)) f.addTextChangedListener(w)
+    }
+
+    /** 05 UTC shows five boxes, 12 UTC only Max Temp; the boxes are filled from the saved reports of the last 24 hours. */
+    private fun updateMinMxPage() {
+        val h = mmHour()
+        show(binding.secMm05, h == 5)
+        show(binding.secMm12, h == 12)
+        show(binding.tvMmNone, h != 5 && h != 12)
+        binding.tvMmHour.text = Td("mm_hour", "Report hour", "ساعت گزارش") + ": " + (if (h == null) "--" else "%02d:00 UTC".format(h))
+        autofillMinMx(h)
+        binding.tvMinMxOut.text = minMxCode()
+    }
+
+    private fun autoFillBox(key: String, f: EditText, value: String?) {
+        val cur = f.text.toString()
+        if (cur.isBlank() || cur == autoFilled[key]) {
+            if (value != null) { f.setText(value); autoFilled[key] = value } else { if (cur.isNotBlank()) f.setText(""); autoFilled.remove(key) }
+        }
+    }
+
+    private fun autofillMinMx(h: Int?) {
+        val day = binding.etDay.int()
+        if (selectedStationName.isEmpty() || day == null || (h != 5 && h != 12)) return
+        fun key(c: Calendar) = (((c.get(Calendar.YEAR) * 100L + c.get(Calendar.MONTH) + 1) * 100L + c.get(Calendar.DAY_OF_MONTH)) * 100L + c.get(Calendar.HOUR_OF_DAY))
+        val lo = key(history.timeKey(day, h!!, 24).second)
+        val hi = key(history.timeKey(day, h!!, 0).second)
+        val rs = ReportStore.load(this).filter { it.station == selectedStationName && it.kind == "synop" && it.sortKey > lo && it.sortKey <= hi }
+        fun num(r: Report, k: String): Double? = parseNumber(r.fields.optString(k))
+        val temps = rs.mapNotNull { it.dry }
+        if (h == 5) {
+            val rh = rs.mapNotNull { num(it, "rh") }
+            val wind = rs.filter { num(it, "ff") != null }.maxByOrNull { num(it, "ff")!! }
+            autoFillBox("mmMaxRh", binding.etMmMaxRh, rh.maxOrNull()?.f1())
+            autoFillBox("mmMinRh", binding.etMmMinRh, rh.minOrNull()?.f1())
+            autoFillBox("mmMinT", binding.etMmMinT, temps.minOrNull()?.f1())
+            autoFillBox("mmMaxFf", binding.etMmMaxFf, wind?.let { num(it, "ff") }?.f1())
+            autoFillBox("mmMaxDd", binding.etMmMaxDd, wind?.fields?.optString("dd")?.takeIf { it.isNotBlank() })
+        } else {
+            autoFillBox("mmMaxT", binding.etMmMaxT, temps.maxOrNull()?.f1())
+        }
+    }
+
+    /** "40827 20094 30057 40018 51408=" at 05 UTC (Tmin, max RH, min RH, max wind); "40827 10237=" at 12 UTC (Tmax). */
+    private fun minMxCode(): String {
+        val wmo = binding.etSynopCode.text.toString().trim().ifEmpty { "/////" }
+        fun rh(prefix: String, f: EditText) = f.num()?.let { prefix + "%03d".format(Math.round(it).toInt().coerceIn(0, 100)) } ?: (prefix.take(1) + "////")
+        val groups = when (mmHour()) {
+            5 -> listOf(
+                binding.etMmMinT.num()?.let { SynopEncoder.groupTmin(it) } ?: "2////",
+                rh("30", binding.etMmMaxRh),
+                rh("40", binding.etMmMinRh),
+                "5" + (binding.etMmMaxDd.int()?.let { if (it == 99) "99" else "%02d".format(Math.round(it / 10.0).toInt()) } ?: "//") +
+                    (binding.etMmMaxFf.int()?.let { "%02d".format(it.coerceIn(0, 99)) } ?: "//")
+            )
+            12 -> listOf(binding.etMmMaxT.num()?.let { SynopEncoder.groupTmax(it) } ?: "1////")
+            else -> return ""
+        }
+        return "$wmo ${groups.joinToString(" ")}=\nNNNN"
+    }
+
+    private fun saveMinMx(quiet: Boolean): Boolean {
+        val day = binding.etDay.int()
+        val hour = mmHour()
+        val code = minMxCode()
+        if (selectedStationName.isEmpty() || day == null || hour == null || code.isEmpty()) {
+            if (!quiet) Toast.makeText(this, Td("report_no", "Select a station and fill in the report first", "ابتدا ایستگاه را انتخاب و گزارش را تکمیل کنید"), Toast.LENGTH_SHORT).show()
+            return false
+        }
+        val c = history.timeKey(day, hour, 0).second
+        ReportStore.upsert(this, Report(System.currentTimeMillis(), selectedStationName, c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1,
+            c.get(Calendar.DAY_OF_MONTH), hour, code, "", null, null, JSONObject(), "minmax"))
+        if (!quiet) Toast.makeText(this, Td("report_saved", "Report saved", "گزارش ذخیره شد"), Toast.LENGTH_SHORT).show()
+        return true
+    }
+
     // ------------------------------------------------------------ saved reports
 
     /** The entries that "Complete report based on last report" copies: visibility, present weather, N, h and the cloud layers. */
     private fun snapshotFields(): JSONObject {
         val o = JSONObject()
         o.put("vis", binding.etVis.text.toString()).put("visUnit", spinnerText(binding.spVisUnit)).put("vertVis", binding.etVertVis.text.toString())
+        o.put("rh", binding.etRH.text.toString()).put("dd", binding.etDd.text.toString()).put("ff", binding.etFf.text.toString())
         o.put("ix", spinnerText(binding.spIX)).put("ww", spinnerText(binding.spWW)).put("w1", spinnerText(binding.spW1)).put("w2", spinnerText(binding.spW2))
         o.put("n", spinnerText(binding.spN)).put("h", spinnerText(binding.spH))
         for (i in 0 until 4) {
@@ -537,7 +668,7 @@ class MainActivity : BaseActivity() {
                 setOnClickListener { editReport(r) }
             }
             card.addView(TextView(this).apply {
-                text = "%04d/%02d/%02d   %02d:00 UTC   \u00B7   %s".format(r.year, r.month, r.day, r.hour, r.station)
+                text = "%04d/%02d/%02d   %02d:00 UTC   \u00B7   %s%s".format(r.year, r.month, r.day, r.hour, r.station, if (r.kind == "minmax") "   [MinMx]" else "")
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.primary)); setTypeface(typeface, Typeface.BOLD); textSize = 14f
                 layoutDirection = View.LAYOUT_DIRECTION_LTR
             })
@@ -643,7 +774,7 @@ class MainActivity : BaseActivity() {
 
     private fun cloud8(d: CloudTypes.DerivedCloudGroup, layers: List<CloudTypes.CloudLayer>): String {
         val (cm, ch) = cloudDigits(layers, d)
-        val nh = if (binding.spNh.selectedItemPosition > 0) spinnerText(binding.spNh) else d.nh.toString()
+        val nh = spinnerText(binding.spNh).ifEmpty { d.nh.toString() }
         return "8$nh${d.cl}$cm$ch"
     }
 
@@ -856,8 +987,9 @@ class MainActivity : BaseActivity() {
                 applyHourSections(null)
             }
             autofillFromHistory()
+            updateMinMxPage()
         })
-        binding.etDay.addTextChangedListener(watcher { autofillFromHistory() })
+        binding.etDay.addTextChangedListener(watcher { autofillFromHistory(); updateMinMxPage() })
     }
 
     private fun applyIxLock() {
@@ -1017,31 +1149,22 @@ class MainActivity : BaseActivity() {
     }
 
     private var nhItems: List<String> = emptyList()
+    private var lastAutoNh = ""
 
-    /** Nh choices: Auto, then 0 up to the total cloud amount N (never 9), then "/". */
+    /** Nh choices: 0 up to the total cloud amount N (never 9), then "/". */
     private fun nhOptions(): List<String> {
         val n = spinnerText(binding.spN)
         val k = n.toIntOrNull()
         val nums = when {
             k != null && k in 1..8 -> (0..k).map { it.toString() }
-            n == "0" -> listOf("0")
             n == "TR" -> listOf("0", "1")
-            else -> emptyList()
+            n == "9" || n == "/" -> emptyList()
+            else -> listOf("0")
         }
-        return listOf(Td("nh_auto", "Auto", "خودکار")) + nums + listOf("/")
+        return nums + listOf("/")
     }
 
-    private fun refreshNhSpinner() {
-        val items = nhOptions()
-        if (items == nhItems) return
-        val previous = if (nhItems.isNotEmpty() && binding.spNh.selectedItemPosition > 0) spinnerText(binding.spNh) else null
-        nhItems = items
-        binding.spNh.adapter = StyledArrayAdapter(this, items)
-        val pos = if (previous != null) items.indexOf(previous) else 0
-        binding.spNh.setSelection(if (pos >= 0) pos else 0)
-    }
-
-    /** CL, CM and CH are filled by the app; Nh follows the layers (Auto) or the value picked from the list. */
+    /** CL, CM and CH are filled by the app. Nh follows the layers by itself until you pick another value from its list. */
     private fun updateCloudDerived() {
         val layers = readCloudLayers()
         val d = CloudTypes.derive(layers)
@@ -1049,8 +1172,17 @@ class MainActivity : BaseActivity() {
         binding.tvCL.text = d.cl.toString()
         binding.tvCM.text = cm
         binding.tvCH.text = ch
-        refreshNhSpinner()
-        binding.tvNhLabel.text = if (binding.spNh.selectedItemPosition <= 0) "Nh  \u2192 ${d.nh}" else "Nh"
+        val n = spinnerText(binding.spN)
+        val auto = if (n == "9" || n == "/") "/" else d.nh.toString()
+        val items = nhOptions()
+        if (items != nhItems) {
+            nhItems = items
+            binding.spNh.adapter = StyledArrayAdapter(this, items)
+            lastAutoNh = ""
+        }
+        val current = spinnerText(binding.spNh)
+        if (lastAutoNh.isEmpty() || current == lastAutoNh || current !in items) setSpinnerValue(binding.spNh, if (auto in items) auto else items.first())
+        lastAutoNh = auto
     }
 
     private fun setupVisibilityUnit() {
